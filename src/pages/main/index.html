@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이세계 PIP</title>
+    <link rel="shortcut icon" href="../../assets/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="../../assets/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="../global.css">
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+    <nav>
+        <div class="movement">
+            <p>Twitch PIP</p>
+        </div>
+        <div class="main_button_panel">
+            <button class="minimize" onclick="ipcRenderer.send('minimizeMainWin')"><img src="../../assets/minimize.svg"></button>
+            <button class="close" onclick="ipcRenderer.send('closeMainWin')"><img src="../../assets/close.svg"></button>
+        </div>
+    </nav>
+    <div class="padding">
+        <header>
+            <div>
+                <p class="channelPoints"><span>채널 포인트 획득 여부(메모리 사용량 증가):</span><input type="checkbox" id="channelPoints"><label for="channelPoints"></label></p>
+            </div>
+            <button id="refresh">
+                <img src="../../assets/refresh.png">
+            </button>
+        </header>
+        <div id="panel">
+        </div>
+    </div>
+    <div id="version">
+        <p id="version_num"></p>
+        <p id="version_update"></p>
+    </div>
+    <p class="developed">Developed by <a href="https://github.com/kewool" target="_blank">Kewool</a></p>
+</body>
+
+</html>

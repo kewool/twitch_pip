@@ -1,0 +1,89 @@
+{
+  "name": "twitch_pip",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "electron .",
+    "build": "npm run build:win && npm run build:mac",
+    "build:win": "electron-builder --windows nsis:x64 -p always",
+    "build:mac": "electron-builder build --mac -p always"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kewool/twitch_pip.git"
+  },
+  "author": "kewool",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kewool/twitch_pip/issues"
+  },
+  "homepage": "https://github.com/kewool/twitch_pip#readme",
+  "dependencies": {
+    "@twurple/api": "^7.0.1",
+    "@twurple/auth": "^7.0.1",
+    "@twurple/auth-electron": "^7.0.1",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.0",
+    "electron": "^26.0.0",
+    "electron-builder": "^24.6.3",
+    "electron-log": "^4.4.6",
+    "electron-rebuild": "^3.2.9",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.1",
+    "eslint": "^8.47.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.2"
+  },
+  "build": {
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "kewool",
+        "repo": "twitch_pip"
+      }
+    ],
+    "productName": "twitch_pip",
+    "appId": "com.electron.twitch_pip",
+    "asar": true,
+    "protocols": {
+      "name": "twitch_pip",
+      "schemes": [
+        "twitch_pip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "./src/assets/icon3.png"
+    },
+    "mac": {
+      "target": {
+        "target": "default",
+        "arch": "universal"
+      },
+      "icon": "./src/assets/icon4.png"
+    },
+    "dmg": {
+      "title": "twitch_pip",
+      "icon": "./src/assets/icon4.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Twwitch PiP",
+      "deleteAppDataOnUninstall": true,
+      "perMachine": true
+    },
+    "directories": {
+      "buildResources": "./resources/installer/",
+      "output": "./dist/",
+      "app": "."
+    }
+  }
+}
