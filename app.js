@@ -7,10 +7,9 @@ const { autoUpdater } = require("electron-updater");
 const twitch = require("./lib.js");
 const config = require("./config.json");
 const Store = require("electron-store");
-require("dotenv").config();
 
 const page_dir = path.join(__dirname, "/src/");
-const clientId = process.env.CLIENT_ID;
+const clientId = config["CLIENT_ID"];
 const redirectUri = config["REDIRECT_URI"];
 const authProvider = new ElectronAuthProvider({
   clientId,
@@ -39,8 +38,8 @@ async function redactedFunc() {
 
 function createMainWindow() {
   mainWin = new BrowserWindow({
-    width: 756,
-    height: 585,
+    width: 560,
+    height: 596,
     frame: false,
     webPreferences: {
       contextIsolation: false,
@@ -48,21 +47,19 @@ function createMainWindow() {
     },
     icon: path.join(page_dir, "assets/icon.png"),
     resizable: false,
+    titleBarStyle: "hidden",
+    trafficLightPosition: {
+      x: 12,
+      y: 12,
+    },
   });
   mainWin.setMenu(null);
   mainWin.loadURL(
     "file://" +
-      path.join(
-        page_dir,
-        `pages/main/index.html?platform=${process.platform}}`,
-      ),
+      path.join(page_dir, `pages/main/index.html?platform=${process.platform}`),
   );
   mainWin.on("closed", () => {
     mainWin = null;
-  });
-  mainWin.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: "deny" };
   });
 }
 
@@ -98,7 +95,7 @@ function createPIPWin(url, name) {
     opacity: store.get("pip_options")[name].opacity,
   });
   streamWin[name].pip.setAspectRatio(16 / 9);
-  // streamWin[name].pip.setMenu(null);
+  streamWin[name].pip.setMenu(null);
   streamWin[name].pip.loadURL(
     "file://" +
       path.join(page_dir, `pages/pip/index.html?url=${url}&name=${name}`),
@@ -171,17 +168,17 @@ if (!lock) {
 }
 
 app.on("ready", () => {
-  // store.delete("order"); //test
+  // store.delete("pip_order"); //test
   // store.delete("auto_start"); //test
   // store.delete("pip_options"); //test
-  if (!store.get("order")) {
-    store.set("order", config["CHANNEL_NAME"]);
+  if (!store.get("pip_order")) {
+    store.set("pip_order", config["CHANNEL_NAME"]);
     app.setLoginItemSettings({
       openAtLogin: true,
     });
   }
   if (!store.get("auto_start")) {
-    const order = store.get("order");
+    const order = store.get("pip_order");
     let autoStart = {};
     order.forEach((e) => {
       autoStart[e] = {};
@@ -191,14 +188,14 @@ app.on("ready", () => {
     });
     store.set("auto_start", autoStart);
   } else {
-    const order = store.get("order");
+    const order = store.get("pip_order");
     order.forEach((e) => {
       store.set(`auto_start.${e}.closed`, false);
       store.set(`auto_start.${e}.status`, false);
     });
   }
   if (!store.get("pip_options")) {
-    const order = store.get("order");
+    const order = store.get("pip_order");
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
     let pip_options = {};
     order.forEach((e) => {
@@ -242,9 +239,44 @@ app.on("activate", () => {
   if (mainWin === null) createMainWindow();
 });
 
+ipcMain.on("logout", async () => {
+  let logoutWin = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      contextIsolation: false,
+      nodeIntegration: true,
+    },
+  });
+  logoutWin.webContents.setAudioMuted(true);
+  let tempWin = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      contextIsolation: false,
+      nodeIntegration: true,
+    },
+  });
+  tempWin.loadURL("https://twitch.tv/");
+  tempWin.webContents.setAudioMuted(true);
+  tempWin.webContents.on("did-finish-load", () => {
+    logoutWin.loadURL("https://twitch.tv/");
+    logoutWin.webContents.on("did-finish-load", () => {
+      logoutWin.webContents.executeJavaScript(
+        `
+        document.querySelector("#root > div > div.Layout-sc-1xcs6mc-0.kBprba > nav > div > div.Layout-sc-1xcs6mc-0.gdKXDc > div.Layout-sc-1xcs6mc-0.cXWuNa > div > div > div > div > button").click();
+        document.querySelector("body > div.ScReactModalBase-sc-26ijes-0.kXkHnj.tw-dialog-layer.tw-root--theme-dark > div > div > div > div > div > div > div > div > div > div > div > div.simplebar-scroll-content > div > div > div:nth-child(5) > button").click();
+        `,
+      );
+      setTimeout(() => {
+        app.exit();
+      }, 2000);
+    });
+  });
+});
+
 ipcMain.on("getUserProfile", async (evt) => {
-  const redacted = (await redactedFunc()).b;
-  const user = await apiClient.users.getUserById(redacted);
+  const user = await apiClient.users.getUserById(
+    (await apiClient.getTokenInfo()).userId,
+  );
   evt.returnValue = {
     name: user?.name,
     profile: user?.profilePictureUrl,
@@ -252,7 +284,7 @@ ipcMain.on("getUserProfile", async (evt) => {
 });
 
 ipcMain.on("getChannelInfo", async (evt) => {
-  const res = await apiClient.users.getUsersByNames(store.get("order"));
+  const res = await apiClient.users.getUsersByNames(store.get("pip_order"));
   const info = await Promise.all(
     res.map(async (e) => {
       const stream = await apiClient.streams.getStreamByUserId(e.id);
@@ -287,7 +319,17 @@ ipcMain.on("getChannelInfo", async (evt) => {
 //   };
 // });
 
+ipcMain.handle("getChannelPoint", async (evt, name) => {
+  const redacted = (await redactedFunc()).a;
+  const res = await twitch.getChannelPoint(name, redacted);
+  return res;
+});
+
 ipcMain.on("getStream", async (evt, name) => {
+  if (streamWin[name]?.pip) {
+    streamWin[name].pip.focus();
+    return;
+  }
   const isStream = (await apiClient.streams.getStreamByUserName(name))
     ? true
     : false;
@@ -382,6 +424,10 @@ ipcMain.on("isStreamOffWhileOn", async (evt, name) => {
 
 ipcMain.on("app_version", (evt) => {
   evt.sender.send("app_version_reply", { version: app.getVersion() });
+});
+
+ipcMain.on("mac_update", () => {
+  shell.openExternal(config.RELEASE_URL);
 });
 
 autoUpdater.on("update-downloaded", () => {

@@ -1,3 +1,4 @@
+const { BrowserWindow } = require("electron");
 const https = require("https");
 
 const clientId = "kimne78kx3ncx6brgo4mv6wki5h1ko";
@@ -42,7 +43,9 @@ function getAccessToken(id, isVod, redacted = {}) {
         resData.body = resData.body.join("");
 
         if (resData.statusCode !== 200) {
-          reject(new Error(`${JSON.parse(data.body).message}`));
+          let win = new BrowserWindow();
+          win.loadURL("https://twitch.tv/login");
+          reject(new Error(`mabye not authorized`));
         } else {
           if (isVod) {
             resolve(JSON.parse(resData.body).data.videoPlaybackAccessToken);
@@ -77,21 +80,21 @@ function getPlaylist(id, accessToken, vod) {
             data.body = data.body.join("");
 
             switch (data.statusCode) {
-            case 200:
-              resolve(resolve(data.body));
-              break;
-            case 404:
-              reject(
-                new Error(
-                  "Transcode does not exist - the stream is probably offline",
-                ),
-              );
-              break;
-            default:
-              reject(
-                new Error(`Twitch returned status code ${data.statusCode}`),
-              );
-              break;
+              case 200:
+                resolve(resolve(data.body));
+                break;
+              case 404:
+                reject(
+                  new Error(
+                    "Transcode does not exist - the stream is probably offline",
+                  ),
+                );
+                break;
+              default:
+                reject(
+                  new Error(`Twitch returned status code ${data.statusCode}`),
+                );
+                break;
             }
           });
         },
@@ -184,7 +187,62 @@ function getLastStreamDate(channel) {
   });
 }
 
+function getChannelPoint(channel, redacted = {}) {
+  const data = [
+    {
+      operationName: "ChannelPointsContext",
+      variables: {
+        channelLogin: channel,
+      },
+      extensions: {
+        persistedQuery: {
+          version: 1,
+          sha256Hash:
+            "1530a003a7d374b0380b79db0be0534f30ff46e61cffa2bc0e2468a909fbc024",
+        },
+      },
+    },
+  ];
+
+  const options = {
+    hostname: "gql.twitch.tv",
+    port: 443,
+    path: "/gql",
+    method: "POST",
+    headers: {
+      "Client-id": clientId,
+      ...redacted,
+    },
+  };
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(options, (response) => {
+      var resData = {};
+      resData.statusCode = response.statusCode;
+      resData.body = [];
+      response.on("data", (chunk) => resData.body.push(chunk));
+      response.on("end", () => {
+        resData.body = resData.body.join("");
+
+        if (resData.statusCode !== 200) {
+          reject(new Error(`${JSON.parse(data.body).message}`));
+        } else {
+          resolve(
+            JSON.parse(resData.body)[0].data.community.channel.self
+              .communityPoints.balance,
+          );
+        }
+      });
+    });
+
+    req.on("error", (error) => reject(error));
+    req.write(JSON.stringify(data));
+    req.end();
+  });
+}
+
 module.exports = {
   getStream: getStream,
   getLastStreamDate: getLastStreamDate,
+  getChannelPoint: getChannelPoint,
 };
